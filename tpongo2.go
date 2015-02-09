@@ -51,6 +51,10 @@ func New(opts ...Options) *Pongo {
 	}
 }
 
+func Default() *Pongo {
+	return New()
+}
+
 func prepareOptions(options []Options) Options {
 	var opt Options
 	if len(options) > 0 {
@@ -105,6 +109,10 @@ type renderer struct {
 }
 
 func (r *Renderer) Render(tmpl string, data pongo2.Context) error {
+	return r.RenderFile(tmpl, data)
+}
+
+func (r *Renderer) RenderFile(tmpl string, data pongo2.Context) error {
 	t, err := r.render.GetTemplate(tmpl)
 	if err != nil {
 		return err
