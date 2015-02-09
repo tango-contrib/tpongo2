@@ -12,7 +12,7 @@ import (
 )
 
 type RenderAction struct {
-	Render
+	Renderer
 }
 
 func (a *RenderAction) Get() error {
@@ -27,7 +27,7 @@ func TestPango2_1(t *testing.T) {
 	recorder.Body = buff
 
 	o := tango.Classic()
-	o.Use(Default())
+	o.Use(New())
 	o.Get("/", new(RenderAction))
 
 	req, err := http.NewRequest("GET", "http://localhost:3000/", nil)
@@ -42,11 +42,11 @@ func TestPango2_1(t *testing.T) {
 }
 
 type Render2Action struct {
-	Render
+	Renderer
 }
 
 func (a *Render2Action) Get() error {
-	return a.RenderFile("test1.html", pongo2.Context{
+	return a.Render("test1.html", pongo2.Context{
 		"name": "tango",
 	})
 }
@@ -57,7 +57,7 @@ func TestPango2_2(t *testing.T) {
 	recorder.Body = buff
 
 	o := tango.Classic()
-	o.Use(Default())
+	o.Use(New())
 	o.Get("/", new(Render2Action))
 
 	req, err := http.NewRequest("GET", "http://localhost:3000/", nil)

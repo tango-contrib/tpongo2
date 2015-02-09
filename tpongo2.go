@@ -19,41 +19,47 @@ const (
 	DefaultCharset = "UTF-8"
 )
 
-type Pangoer interface {
-	SetRenderer(renderer *Renderer)
+type Pongoer interface {
+	SetRenderer(*renderer)
 }
 
-type Render struct {
-	*Renderer
+type Renderer struct {
+	*renderer
 }
 
-func (r *Render) SetRenderer(renderer *Renderer) {
-	r.Renderer = renderer
+func (r *Renderer) SetRenderer(renderer *renderer) {
+	r.renderer = renderer
 }
 
 type Pongo struct {
-	log tango.Logger
-	templatesDir string
+	Options
+
 	templates map[string]*pongo2.Template
 	lock sync.RWMutex
-	moniter bool
 }
 
-func New(templatesDir string, moniter bool) *Pongo {
+type Options struct {
+	TemplatesDir string
+	Reload bool
+}
+
+func New(opts ...Options) *Pongo {
+	opt := prepareOptions(opts)
 	return &Pongo{
-		templatesDir: templatesDir,
+		Options : opt,
 		templates: make(map[string]*pongo2.Template),
-		moniter: moniter,
 	}
 }
 
-func Default() *Pongo {
-	return New("templates", false)
-}
-
-// @inject
-func (p *Pongo) SetLogger(l tango.Logger) {
-	p.log = l
+func prepareOptions(options []Options) Options {
+	var opt Options
+	if len(options) > 0 {
+		opt = options[0]
+	}
+	if opt.TemplatesDir == "" {
+		opt.TemplatesDir = "templates"
+	}
+	return opt
 }
 
 func (p *Pongo) GetTemplate(name string) (t *pongo2.Template, err error) {
@@ -62,7 +68,7 @@ func (p *Pongo) GetTemplate(name string) (t *pongo2.Template, err error) {
 
 	var ok bool
 	if t, ok = p.templates[name]; !ok {
-		t, err = pongo2.FromFile(filepath.Join(p.templatesDir, name))
+		t, err = pongo2.FromFile(filepath.Join(p.Options.TemplatesDir, name))
 		if err != nil {
 			return
 		}
@@ -71,10 +77,9 @@ func (p *Pongo) GetTemplate(name string) (t *pongo2.Template, err error) {
 	return
 }
 
-func (p *Pongo) NewRenderer(resp tango.ResponseWriter) *Renderer {
-	return &Renderer{
+func (p *Pongo) NewRenderer(resp tango.ResponseWriter) *renderer {
+	return &renderer{
 		render: p,
-		templatesDir: p.templatesDir,
 		ResponseWriter: resp,
 		ContentType: ContentHTML,
 		Charset: DefaultCharset,
@@ -83,7 +88,7 @@ func (p *Pongo) NewRenderer(resp tango.ResponseWriter) *Renderer {
 
 func (p *Pongo) Handle(ctx *tango.Context) {
 	if action := ctx.Action(); action != nil {
-		if pr, ok := action.(Pangoer); ok {
+		if pr, ok := action.(Pongoer); ok {
 			rd := p.NewRenderer(ctx.ResponseWriter)
 			pr.SetRenderer(rd)
 		}
@@ -91,16 +96,15 @@ func (p *Pongo) Handle(ctx *tango.Context) {
 	ctx.Next()
 }
 
-type Renderer struct {
+type renderer struct {
 	render *Pongo
-	templatesDir string
 
 	tango.ResponseWriter
 	ContentType string
 	Charset string
 }
 
-func (r *Renderer) RenderFile(tmpl string, data pongo2.Context) error {
+func (r *Renderer) Render(tmpl string, data pongo2.Context) error {
 	t, err := r.render.GetTemplate(tmpl)
 	if err != nil {
 		return err
