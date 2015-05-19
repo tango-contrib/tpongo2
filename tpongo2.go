@@ -20,15 +20,22 @@ const (
 )
 
 type Pongoer interface {
-	SetRenderer(*renderer)
+	SetRenderer(*Pongo, tango.ResponseWriter, string, string)
 }
 
 type Renderer struct {
-	*renderer
+	render *Pongo
+	tango.ResponseWriter
+	ContentType string
+	Charset string
 }
 
-func (r *Renderer) SetRenderer(renderer *renderer) {
-	r.renderer = renderer
+func (r *Renderer) SetRenderer(render *Pongo, resp tango.ResponseWriter, 
+	ContentType, Charset string) {
+	r.render = render
+	r.ResponseWriter = resp
+	r.ContentType = ContentType
+	r.Charset = Charset
 }
 
 type Pongo struct {
@@ -41,6 +48,7 @@ type Pongo struct {
 type Options struct {
 	TemplatesDir string
 	Reload bool
+	Suffix string
 }
 
 func New(opts ...Options) *Pongo {
@@ -63,13 +71,22 @@ func prepareOptions(options []Options) Options {
 	if opt.TemplatesDir == "" {
 		opt.TemplatesDir = "templates"
 	}
+	if len(opt.Suffix) > 0 {
+		if opt.Suffix[0] != '.' {
+			opt.Suffix = "."+opt.Suffix
+		}
+	}
 	return opt
 }
 
 func (p *Pongo) GetTemplate(name string) (t *pongo2.Template, err error) {
+	name = name + p.Suffix
+	if p.Reload {
+		return pongo2.FromFile(filepath.Join(p.Options.TemplatesDir, name))
+	}
+
 	p.lock.Lock()
 	defer p.lock.Unlock()
-
 	var ok bool
 	if t, ok = p.templates[name]; !ok {
 		t, err = pongo2.FromFile(filepath.Join(p.Options.TemplatesDir, name))
@@ -81,38 +98,22 @@ func (p *Pongo) GetTemplate(name string) (t *pongo2.Template, err error) {
 	return
 }
 
-func (p *Pongo) NewRenderer(resp tango.ResponseWriter) *renderer {
-	return &renderer{
-		render: p,
-		ResponseWriter: resp,
-		ContentType: ContentHTML,
-		Charset: DefaultCharset,
-	}
-}
-
 func (p *Pongo) Handle(ctx *tango.Context) {
 	if action := ctx.Action(); action != nil {
 		if pr, ok := action.(Pongoer); ok {
-			rd := p.NewRenderer(ctx.ResponseWriter)
-			pr.SetRenderer(rd)
+			pr.SetRenderer(p, ctx.ResponseWriter, ContentHTML, DefaultCharset)
 		}
 	}
 	ctx.Next()
 }
 
-type renderer struct {
-	render *Pongo
+type T map[string]interface{}
 
-	tango.ResponseWriter
-	ContentType string
-	Charset string
+func (r *Renderer) Render(tmpl string, data map[string]interface{}) error {
+	return r.RenderFile(tmpl, pongo2.Context(data))
 }
 
-func (r *Renderer) Render(tmpl string, data pongo2.Context) error {
-	return r.RenderFile(tmpl, data)
-}
-
-func (r *Renderer) RenderFile(tmpl string, data pongo2.Context) error {
+func (r *Renderer) RenderFile(tmpl string, data map[string]interface{}) error {
 	t, err := r.render.GetTemplate(tmpl)
 	if err != nil {
 		return err
