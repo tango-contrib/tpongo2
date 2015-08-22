@@ -1,4 +1,4 @@
-pongo2 [![Build Status](https://drone.io/github.com/tango-contrib/tpongo2/status.png)](https://drone.io/github.com/tango-contrib/tpongo2/latest) [![](http://gocover.io/_badge/github.com/tango-contrib/tpongo2)](http://gocover.io/github.com/tango-contrib/tpongo2)
+tpongo2 [![Build Status](https://drone.io/github.com/tango-contrib/tpongo2/status.png)](https://drone.io/github.com/tango-contrib/tpongo2/latest) [![](http://gocover.io/_badge/github.com/tango-contrib/tpongo2)](http://gocover.io/github.com/tango-contrib/tpongo2)
 ======
 
 Middleware tpongo2 is a [pongo2](https://github.com/flosch/pongo2).**v3** template engine support for [Tango](https://github.com/lunny/tango). 
@@ -19,7 +19,7 @@ import (
 )
 
 type RenderAction struct {
-    tpango2.Renderer
+    tpongo2.Renderer
 }
 
 func (a *RenderAction) Get() error {
@@ -30,7 +30,7 @@ func (a *RenderAction) Get() error {
 
 func main() {
     o := tango.Classic()
-    o.Use(tpango2.New())
+    o.Use(tpongo2.New())
     o.Get("/", new(RenderAction))
 }
 ```
