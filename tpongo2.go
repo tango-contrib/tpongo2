@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"github.com/lunny/tango"
-	"gopkg.in/flosch/pongo2.v3"
+	"github.com/flosch/pongo2"
 )
 
 const (
