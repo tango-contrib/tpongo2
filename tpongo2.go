@@ -136,3 +136,19 @@ func (r *Renderer) RenderString(content string, data pongo2.Context) error {
 	r.Header().Set(ContentType, r.ContentType+"; charset="+r.Charset)
 	return tpl.ExecuteWriter(data, r.ResponseWriter)
 }
+
+func (r *Renderer) HTMLBytes(tmpl string, data map[string]interface{}) ([]byte, error) {
+	t, err := r.render.GetTemplate(tmpl)
+	if err != nil {
+		return nil, err
+	}
+
+	r.Header().Set(ContentType, r.ContentType+"; charset="+r.Charset)
+	return t.ExecuteBytes(data)
+
+}
+
+func (r *Renderer) HTMLString(tmpl string, data map[string]interface{}) (string, error) {
+	b, e := r.HTMLBytes(tmpl, data)
+	return string(b), e
+}
