@@ -2,21 +2,23 @@ package tpongo2
 
 import (
 	"path/filepath"
+	"strings"
 	"sync"
 
-	"github.com/lunny/tango"
 	"github.com/flosch/pongo2"
+	"github.com/lunny/tango"
 )
 
 const (
-	ContentType    = "Content-Type"
-	ContentLength  = "Content-Length"
-	ContentBinary  = "application/octet-stream"
-	ContentJSON    = "application/json"
-	ContentHTML    = "text/html"
-	ContentXHTML   = "application/xhtml+xml"
-	ContentXML     = "text/xml"
-	DefaultCharset = "UTF-8"
+	ContentType           = "Content-Type"
+	ContentLength         = "Content-Length"
+	ContentBinary         = "application/octet-stream"
+	ContentJSON           = "application/json"
+	ContentHTML           = "text/html"
+	ContentXHTML          = "application/xhtml+xml"
+	ContentXML            = "text/xml"
+	DefaultCharset        = "UTF-8"
+	DefaultTemplateSuffix = ".html"
 )
 
 type Pongoer interface {
@@ -27,10 +29,10 @@ type Renderer struct {
 	render *Pongo
 	tango.ResponseWriter
 	ContentType string
-	Charset string
+	Charset     string
 }
 
-func (r *Renderer) SetRenderer(render *Pongo, resp tango.ResponseWriter, 
+func (r *Renderer) SetRenderer(render *Pongo, resp tango.ResponseWriter,
 	ContentType, Charset string) {
 	r.render = render
 	r.ResponseWriter = resp
@@ -42,19 +44,19 @@ type Pongo struct {
 	Options
 
 	templates map[string]*pongo2.Template
-	lock sync.RWMutex
+	lock      sync.RWMutex
 }
 
 type Options struct {
 	TemplatesDir string
-	Reload bool
-	Suffix string
+	Reload       bool
+	Suffix       string
 }
 
 func New(opts ...Options) *Pongo {
 	opt := prepareOptions(opts)
 	return &Pongo{
-		Options : opt,
+		Options:   opt,
 		templates: make(map[string]*pongo2.Template),
 	}
 }
@@ -71,16 +73,21 @@ func prepareOptions(options []Options) Options {
 	if opt.TemplatesDir == "" {
 		opt.TemplatesDir = "templates"
 	}
-	if len(opt.Suffix) > 0 {
-		if opt.Suffix[0] != '.' {
-			opt.Suffix = "."+opt.Suffix
-		}
+	if len(opt.Suffix) <= 0 {
+		opt.Suffix = DefaultTemplateSuffix
 	}
+
+	if opt.Suffix[0] != '.' {
+		opt.Suffix = "." + opt.Suffix
+	}
+
 	return opt
 }
 
 func (p *Pongo) GetTemplate(name string) (t *pongo2.Template, err error) {
-	name = name + p.Suffix
+	if !strings.HasSuffix(name, p.Suffix) {
+		name = name + p.Suffix
+	}
 	if p.Reload {
 		return pongo2.FromFile(filepath.Join(p.Options.TemplatesDir, name))
 	}
@@ -130,7 +137,7 @@ func (r *Renderer) RenderFile(tmpl string, data map[string]interface{}) error {
 func (r *Renderer) RenderString(content string, data pongo2.Context) error {
 	tpl, err := pongo2.FromString(content)
 	if err != nil {
-	    return err
+		return err
 	}
 
 	r.Header().Set(ContentType, r.ContentType+"; charset="+r.Charset)
